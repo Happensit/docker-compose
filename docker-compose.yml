@@ -1,0 +1,110 @@
+version: '2'
+
+services:
+
+    applications:
+        image: tianon/true
+        volumes:
+           - ../PHP:/var/www
+           - ../PHP/Silex/:/var/www/Silex
+           - ../PHP/Zend/:/var/www/Zend
+           - ../PHP/Symfony/:/var/www/Symfony
+           - ../PHP/Yii1/:/var/www/Yii1
+           - ../PHP/Yii2/:/var/www/Yii2
+
+    php-fpm:
+        build:
+            context: ./php-fpm
+        volumes_from:
+            - applications
+        expose:
+            - "9000"
+        # extra_hosts:
+        #     - "dockerhost:10.0.75.1"
+        # environment:
+
+    nginx:
+        build:
+            context: ./nginx
+            args:
+                - PHP_UPSTREAM=php-fpm
+        volumes_from:
+            - applications
+        volumes:
+            - ./nginx/logs/:/var/log/nginx
+            - ./nginx/sites/:/etc/nginx/sites-available
+        ports:
+            - "80:80"
+            - "443:443"
+        links:
+            - php-fpm
+
+    postgres:
+        build: ./postgres
+        volumes:
+            # - ./postgres/data/:/var/lib/postgresql/data
+            - postgres:/var/lib/postgresql/data
+        ports:
+            - "5432:5432"
+        environment:
+            # POSTGRES_DB: 
+            POSTGRES_USER: docker 
+            POSTGRES_PASSWORD: docker
+
+    redis:
+        build: ./redis
+        volumes:
+            - redis:/data
+        ports:
+            - "6379:6379"
+
+    beanstalkd:
+        build: ./beanstalkd
+        ports:
+            - "11300:11300"
+        privileged: true
+        links:
+            - php-fpm
+
+    beanstalkd-console:
+        build: ./beanstalkd-console
+        ports:
+            - "2080:2080"
+        links:
+            - beanstalkd
+
+    rabbitmq:
+        build: ./rabbitmq
+        ports:
+            - "5672:5672"
+            - "15671:15671"
+            - "8080:15672"
+        privileged: true
+        environment:
+            RABBITMQ_DEFAULT_USER: guest
+            RABBITMQ_DEFAULT_PASS: guest
+        links:
+            - php-fpm
+
+    elasticsearch:
+        build: ./elasticsearch
+        volumes:
+            - elasticsearch-data:/usr/share/elasticsearch/data
+            - elasticsearch-plugins:/usr/share/elasticsearch/data
+        ports:
+            - "9200:9200"
+            - "9300:9300"
+        links:
+            - php-fpm
+
+volumes:
+    postgres:
+        driver: "local"
+    redis:
+        driver: "local"
+    elasticsearch-data:
+        driver: "local"
+    elasticsearch-plugins:
+        driver: "local"
+    sessions:    ## nothing is connected to this (- ./data/sessions:/sessions)
+        driver: "local"

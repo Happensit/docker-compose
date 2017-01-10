@@ -1,0 +1,4 @@
+DROP USER IF EXISTS 'root'; 
+CREATE USER 'root'@'%' IDENTIFIED BY 'root'; 
+GRANT ALL ON *.* TO 'root'@'%';
+FLUSH PRIVILEGES;
